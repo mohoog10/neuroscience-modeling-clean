@@ -803,8 +803,6 @@ class KerasClassifierModel(Model):
                 "gru1_units": trial.suggest_int("gru1_units", 32, 128, step=32),
                 "gru2_units": trial.suggest_int("gru2_units", 64, 256, step=64),
                 "rec_dropout": trial.suggest_float("rec_dropout", 0.0, 0.5, step=0.1),
-                # GRU often benefits from longer training
-                "epochs": trial.suggest_int("epochs", 20, 500, step=30),
             }
 
         elif "Transformer" in model_type:
@@ -827,7 +825,8 @@ class KerasClassifierModel(Model):
         outdir = os.path.join("results","figures", model_type)
         os.makedirs(outdir, exist_ok=True)
         viz.plot_optimization_history(study).write_html(os.path.join(outdir,"history.html"))
-        viz.plot_param_importances(study).write_html(os.path.join(outdir,"importances.html"))
+        if len(study.trials) >= 2:
+            viz.plot_param_importances(study).write_html(os.path.join(outdir,"importances.html"))
         #viz.plot_intermediate_values(study).write_html(os.path.join(outdir,"intermediate.html"))
 
     def _save_trial_plot(self, history, model_type, trial_number):
@@ -1079,4 +1078,3 @@ class KerasClassifierModel(Model):
 
 
     
-

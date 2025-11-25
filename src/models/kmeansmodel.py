@@ -233,6 +233,12 @@ class KMeansModel(Model):
 
         self.is_tested = True
         return results
+
+    def run_optuna_search(self, n_trials: int = 10):
+        """
+        Placeholder to satisfy the abstract interface; KMeans has no Optuna tuning here.
+        """
+        raise NotImplementedError("run_optuna_search is not implemented for KMeansModel.")
     
 
     def plot_low_dim_using_config(self,

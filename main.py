@@ -1,3 +1,5 @@
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
 import json
 from pathlib import Path
 import sys

@@ -1,3 +1,5 @@
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
 import json
 from pathlib import Path
 import sys,time
@@ -12,6 +14,7 @@ from src.models.rfc_model import RandomForestClassifierModel
 from src.models.keras_model import KerasClassifierModel
 
 def progress_bar(current, total, bar_length=30):
+    """Simple textual progress bar for multi-model loops."""
     percent = float(current) / total
     arrow = '#' * int(round(percent * bar_length))
     spaces = ' ' * (bar_length - len(arrow))
@@ -29,6 +32,7 @@ def load_config(path: str) -> dict:
         raise ValueError(f"Config file must contain JSON. Error: {e}")
 
 def print_shapes(X_train, y_train, X_val, y_val, X_test, y_test):
+    """Log dataset split shapes for quick sanity checks."""
     print("Dataset shapes:")
     print("X_train:", X_train.shape)
     print("y_train:", y_train.shape)
@@ -131,11 +135,12 @@ def main():
             runtime_cfg = inject_splits_and_preprocessor(selected_cfg, pre, splits)
             print(selected_cfg['name'],runtime_cfg['name'],selected_cfg['type'])
             if selected_cfg.get('build_mode') == 'grid':
+                n_trials = selected_cfg.get("optuna_trials", 30)
                 manager.run_tuning(
                     selected_cfg['type'],
                     mode=mode,
                     config=runtime_cfg,
-                    n_trials=30
+                    n_trials=n_trials
                 )
 
             # end model timer
@@ -162,7 +167,8 @@ def main():
 
         if selected_cfg.get('build_mode') == 'grid':
             start = time.time()
-            manager.run_tuning(selected_cfg['type'], mode=mode, config=runtime_cfg, n_trials=8)
+            n_trials = selected_cfg.get("optuna_trials", 8)
+            manager.run_tuning(selected_cfg['type'], mode=mode, config=runtime_cfg, n_trials=n_trials)
             end = time.time()
             print(f"Model '{selected_cfg['name']}' finished in {end-start:.2f} seconds.")
 

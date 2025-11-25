@@ -131,3 +131,7 @@ class LogisticRegressionModel(Model):
         self._saved_split_predictions["test"] = preds
         self._saved_split_labels["test"] = np.asarray(y) if y is not None else None
         return res
+
+    def run_optuna_search(self, n_trials: int = 10):
+        """Logistic model does not support Optuna tuning in this project."""
+        raise NotImplementedError("run_optuna_search not implemented for LogisticRegressionModel")

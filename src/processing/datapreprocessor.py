@@ -235,6 +235,7 @@ class DataPreprocessor:
         return self.split()
     
     def label_func(self):
+        """Default fallback label generator used when CSVs lack explicit targets."""
         return np.random.randint(2)
     def load_all_csvs(self,label_func=label_func):
         """

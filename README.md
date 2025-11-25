@@ -1,299 +1,124 @@
 # Neuroscience Modeling Framework
 
-A Docker-based neuroscience modeling framework with clean architecture for model training, validation, and testing.
+Unified pipelines for classic ML (sklearn) and neural (Keras) models, built with a clean architecture and Optuna-powered hyperparameter tuning.
 
-## 🏗️ Architecture
-
-The framework follows a clean architecture pattern with the following components:
+## 🏗️ Repository Layout
 
 ```
 neuroscience-modeling/
-│
+├── process_csv_files/        # synthetic data + preprocessing helpers
+├── results/                  # Optuna reports & artifacts
 ├── src/
-│   ├── interface/          # Interface layer
-│   │   ├── interface.py    # Abstract interface base class
-│   │   └── interface_cli.py # CLI implementation
-│   │
-│   ├── manager/            # Manager layer
-│   │   └── manager.py      # Coordinates interface and registry
-│   │
-│   ├── registry/           # Model registry
-│   │   └── model_registry.py # Model selection and management
-│   │
-│   └── models/             # Model implementations
-│       ├── model.py        # Abstract model base class
-│       ├── model1.py       # Simple neural network model
-│       └── model2.py       # Convolutional network model
-│
-├── main.py                 # Application entry point
-├── Dockerfile              # Docker configuration
-├── docker-compose.yml      # Docker Compose configuration
-└── requirements.txt        # Python dependencies
+│   ├── interface/            # CLI adapters
+│   ├── manager/              # orchestrates interface + registry + models
+│   ├── registry/             # model registration
+│   └── models/               # sklearn & Keras implementations
+├── main.py                   # single-model pipeline entry point
+├── optuna_main.py            # multi-model Optuna tuning entry point
+├── tests/                    # python -m unittest discover tests
+└── requirements.txt
 ```
 
-## 🚀 Features
+## ✨ Key Features
 
-- **Clean Architecture**: Separation of concerns with abstract interfaces and implementations
-- **Model Registry**: Easy registration and selection of different models
-- **CLI Interface**: Command-line interface for model operations
-- **Docker Support**: Containerized deployment for consistency
-- **Multiple Models**: Includes two example models (Model1 and Model2)
-- **Complete Pipeline**: Support for training, validation, testing, and prediction
+- **Clean Architecture** separation (interface → manager → registry → models).
+- **Model zoo**: KMeans, LogisticRegression, RandomForest, Keras Conv1D, GRU (Transformer-ready).
+- **Optuna integration**: auto-tunes every configured model and saves best-trial weights + reports.
+- **Synthetic dataset workflow**: generate padded CSVs for experimentation via `process_csv_files/simulated.py`.
+- **Rich reporting**: confusion matrices & classification reports per model in `results/reports/<Model>/`.
+- **Unit tests**: registry, preprocessing, manager, and KMeans flows covered in `tests/test_core.py`.
 
-## 📋 Prerequisites
+## 📋 Requirements
 
-- Docker (version 20.10 or higher)
-- Docker Compose (version 1.29 or higher)
-
-OR
-
-- Python 3.11+
+- Python 3.10+ (virtualenv recommended)
 - pip
+- (Optional) Docker 20.10+/Compose 1.29+ for containerized demos
 
-## 🔧 Installation
+## 🚀 Quickstart (Local)
 
-### Using Docker (Recommended)
-
-1. Clone the repository:
 ```bash
 git clone https://github.com/mohoog10/neuroscience-modeling.git
 cd neuroscience-modeling
+python3 -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip && pip install -r requirements.txt
+
+# 1. Generate synthetic dataset
+python process_csv_files/simulated.py
+
+# 2. Train a single model (uses default_config.json)
+NPY_DISABLE_MACOS_ACCELERATE_CHECK=1 python main.py \
+  --model KMeans --mode train --config default_config.json
+
+# 3. Tune all models defined in test_own_data.json
+NPY_DISABLE_MACOS_ACCELERATE_CHECK=1 python optuna_main.py \
+  --config test_own_data.json
+
+# 4. Run unit tests
+python -m unittest discover tests
 ```
 
-2. Build and run with Docker Compose:
+## 🔧 Config-Driven Pipelines
+
+- `default_config.json` → points to a single CSV (`simulated_dataset/sample_0.csv`) for quick KMeans/logistic smoke tests.
+- `test_own_data.json` → loads the entire `simulated_dataset/` directory, splits into train/val/test, and tunes:
+  - RandomForest (Optuna grid)
+  - KerasConv1D (short epochs/trials for CPU)
+  - KerasGRU (short epochs/trials for CPU)
+  - (Transformer entry available but disabled by default on CPU-only machines)
+
+Each model block supports `optuna_trials`, `epochs`, `batch_size`, and a `layers` list for Keras architectures.
+
+## 🧪 Model Summary
+
+| Name             | Stack      | Notes                                        |
+|------------------|------------|----------------------------------------------|
+| `KMeans`         | sklearn    | Unsupervised clustering baseline             |
+| `LogisticRegression` | sklearn | Fast supervised baseline                     |
+| `RandomForest`   | sklearn    | Tuned via Optuna, saves confusion matrices   |
+| `KerasConv1D`    | Keras CNN  | Lightweight 1D convolutional classifier      |
+| `KerasGRU`       | Keras RNN  | Mask-aware GRU stack for padded sequences    |
+
+## 📊 Output Artifacts
+
+- `results/reports/<Model>/classification_report.txt`
+- `results/reports/<Model>/confusion_matrix.png`
+- `results/<Model>_trials_results.csv` (full Optuna trial table)
+- `results/best_results.csv` (best trial summaries)
+
+Example Optuna run (`NPY_DISABLE_MACOS_ACCELERATE_CHECK=1 python optuna_main.py --config test_own_data.json`) prints progress like:
+
+```
+RandomForest  ... finished in 100.6s (reports saved)
+KerasConv1D   ... finished in 12.8s (reports saved)
+KerasGRU      ... finished in 55.7s (reports saved)
+All 3 models finished in 239.1 seconds.
+```
+
+## 🧰 Extending
+
+1. Add a subclass of `Model` under `src/models/`.
+2. Register it in `main.py` / `optuna_main.py` via `registry.register_model("name", Class)`.
+3. Add a config block (or new JSON file) referencing the model + any Optuna grids/layers.
+4. Optional: update `tests/` with a lightweight smoke test for the new component.
+
+## 🧪 Tests
+
+Run all unit tests:
+
 ```bash
-docker-compose up --build
+python -m unittest discover tests
 ```
 
-### Local Installation
+`tests/test_core.py` currently covers:
+- Model registry registration/lookup
+- `DataPreprocessor.split` and multi-file loader
+- Logistic manager pipeline (train + predict)
+- KMeans train/validate flow
 
-1. Clone the repository:
-```bash
-git clone https://github.com/mohoog10/neuroscience-modeling.git
-cd neuroscience-modeling
-```
+## 📝 Notes
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+- TensorFlow warns when loading optimizer states with different variable counts; models still run.
+- When using Keras Transformer layers, a CUDA-enabled GPU (or CPU kernels with BroadcastTo support) is required. On CPU-only Macs, keep the transformer config disabled.
+- `NPY_DISABLE_MACOS_ACCELERATE_CHECK=1` prevents macOS Accelerate sanity-check crashes.
 
-3. Run the application:
-```bash
-python main.py
-```
-
-## 💻 Usage
-
-### Demo Mode
-
-Run without arguments to see a demonstration of both models:
-
-```bash
-python main.py
-```
-
-### CLI Mode
-
-Use command-line arguments to specify model and operation mode:
-
-```bash
-# Train Model1
-python main.py --model Model1 --mode train
-
-# Validate Model2
-python main.py --model Model2 --mode validate
-
-# Test a model
-python main.py --model Model1 --mode test
-```
-
-### Available Options
-
-- `--model`: Model to use (Model1, Model2)
-- `--mode`: Operation mode (train, validate, test)
-- `--config`: Path to configuration file (optional)
-
-### Docker Usage
-
-Run the container:
-```bash
-docker-compose up
-```
-
-Run with custom command:
-```bash
-docker-compose run neuroscience-modeling python main.py --model Model1 --mode train
-```
-
-Stop the container:
-```bash
-docker-compose down
-```
-
-## 🧪 Models
-
-### Model1 - Simple Neural Network
-- Basic neural network implementation
-- Suitable for simple classification tasks
-- Fast training and inference
-
-**Configuration Options:**
-- `learning_rate`: Learning rate (default: 0.01)
-- `epochs`: Number of training epochs (default: 100)
-
-### Model2 - Convolutional Network
-- Convolutional neural network architecture
-- Better for complex pattern recognition
-- Includes multiple metrics (accuracy, precision, recall, F1-score)
-
-**Configuration Options:**
-- `learning_rate`: Learning rate (default: 0.001)
-- `epochs`: Number of training epochs (default: 50)
-- `batch_size`: Batch size for training (default: 32)
-
-## 📊 Example Output
-
-```
-============================================================
-Neuroscience Modeling Framework
-============================================================
-
-Model 'Model1' registered successfully
-Model 'Model2' registered successfully
-
-Available models: ['Model1', 'Model2']
-
-============================================================
-
-Running in DEMO mode...
-
-==================================================
-Running Pipeline: Model1 in train mode
-==================================================
-
-Selecting model: Model1
-Model 'Model1' selected successfully
-Building Model1...
-Model1 built successfully with shape (10, 5)
-Training Model1...
-Epoch 0/50, Loss: 1.0000
-Epoch 20/50, Loss: 0.0476
-Epoch 40/50, Loss: 0.0244
-Model1 training completed!
-...
-```
-
-## 🛠️ Extending the Framework
-
-### Adding a New Model
-
-1. Create a new model class inheriting from `Model`:
-
-```python
-from src.models.model import Model
-
-class Model3(Model):
-    def __init__(self):
-        super().__init__()
-        self.name = "Model3"
-    
-    def build(self, model):
-        # Implementation
-        pass
-    
-    def train(self):
-        # Implementation
-        pass
-    
-    # Implement other required methods...
-```
-
-2. Register the model in `main.py`:
-
-```python
-from src.models.model3 import Model3
-
-def initialize_registry():
-    registry = ModelRegistry()
-    registry.register_model('Model1', Model1)
-    registry.register_model('Model2', Model2)
-    registry.register_model('Model3', Model3)  # Add new model
-    return registry
-```
-
-### Adding a New Interface
-
-1. Create a new interface class inheriting from `Interface`:
-
-```python
-from src.interface.interface import Interface
-
-class InterfaceGUI(Interface):
-    def setup(self):
-        # Implementation
-        pass
-    
-    def run(self, name):
-        # Implementation
-        pass
-```
-
-2. Use it in the Manager initialization.
-
-## 📝 Project Structure Details
-
-### Interface Layer
-- **interface.py**: Abstract base class defining the interface contract
-- **interface_cli.py**: Command-line interface implementation using argparse
-
-### Manager Layer
-- **manager.py**: Orchestrates the interaction between interface and models
-- Handles model selection, building, and execution of operations
-
-### Registry Layer
-- **model_registry.py**: Manages model registration and retrieval
-- Provides a centralized way to access available models
-
-### Models Layer
-- **model.py**: Abstract base class for all models
-- **model1.py**: Simple neural network implementation
-- **model2.py**: Convolutional network implementation
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
-## 👤 Author
-
-mohamed & Sven
-
-## 🔗 Links
-
-- GitHub: [mohoog10](https://github.com/mohoog10)
-- Repository: [neuroscience-modeling](https://github.com/mohoog10/neuroscience-modeling)
-
-## 📚 Additional Resources
-
-- [Docker Documentation](https://docs.docker.com/)
-- [Python Documentation](https://docs.python.org/3/)
-- [NumPy Documentation](https://numpy.org/doc/)
-
-## 🐛 Known Issues
-
-None at this time. Please report any issues on the GitHub issue tracker.
-
-## 🎯 Future Enhancements
-
-- [ ] Add GUI interface
-- [ ] Implement data loading utilities
-- [ ] Add model checkpointing
-- [ ] Include visualization tools
-- [ ] Add more model architectures
-- [ ] Implement hyperparameter tuning
-- [ ] Add logging and monitoring
-- [ ] Create comprehensive test suite
+Happy modeling! 🎓🧠

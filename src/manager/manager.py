@@ -197,6 +197,17 @@ class Manager:
         return results
 
     def run_gridsearch_pipeline(self, cfg: Dict,models_cfg: list[Dict]) -> Dict:
+        """
+        Execute a sklearn GridSearchCV pipeline for every model definition that
+        supplies a ``param_grid`` entry.
+
+        Args:
+            cfg: Top-level configuration dict containing the gridsearch settings.
+            models_cfg: List of model configs with injected runtime splits.
+
+        Returns:
+            Dict[str, Dict]: mapping model type -> best scores/params and raw cv results.
+        """
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PolynomialFeatures
         from sklearn.model_selection import GridSearchCV
