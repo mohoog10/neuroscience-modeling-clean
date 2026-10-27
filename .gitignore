@@ -47,11 +47,19 @@ Thumbs.db
 results/
 outputs/
 data/
+simulated_dataset/
+artifacts/
 *.csv
 *.pkl
 *.h5
 *.pth
 *.ckpt
+*.weights.h5
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Environment variables
 .env
